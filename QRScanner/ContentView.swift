@@ -7,17 +7,29 @@
 
 import SwiftUI
 
+import SwiftUI
+
 struct ContentView: View {
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        TabView {
+            QRCodeScannerView(viewModel: QRCodeScannerViewModel())
+                .tabItem {
+                    Label("Escanear", systemImage: "qrcode.viewfinder")
+                }
+            
+            FlutterCustomView()
+                . tabItem {
+                    Label("Flutter View", systemImage: "bird.fill")
+                }
+            
+            ScannedCodesListView()
+                .tabItem {
+                    Label("Historial", systemImage: "clock")
+                }
         }
-        .padding()
     }
 }
+
 
 #Preview {
     ContentView()
