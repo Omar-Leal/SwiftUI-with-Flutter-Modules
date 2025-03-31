@@ -9,45 +9,77 @@ import SwiftUI
 import AVFoundation
 
 struct QRCodeScannerView: UIViewControllerRepresentable {
-    @ObservedObject var viewModel: QRCodeScannerViewModel
+    @Binding var scannedCode: String?
+    
+    func makeCoordinator() -> Coordinator {
+        return Coordinator(self)
+    }
     
     func makeUIViewController(context: Context) -> UIViewController {
-        let controller = UIViewController()
+        let viewController = UIViewController()
+        let captureSession = AVCaptureSession()
         
-        // evitando error en optional captureSession con guard
-        guard let captureSession = viewModel.captureSession else {
-            return controller
+            // Configurar la cámara
+        guard let videoCaptureDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else {
+            print("No se encontró una cámara disponible")
+            return viewController
         }
         
+        let videoInput: AVCaptureDeviceInput
+        do {
+            videoInput = try AVCaptureDeviceInput(device: videoCaptureDevice)
+        } catch {
+            print("Error al acceder a la cámara: \(error)")
+            return viewController
+        }
+        
+        if captureSession.canAddInput(videoInput) {
+            captureSession.addInput(videoInput)
+        } else {
+            print("No se pudo agregar la entrada de video")
+            return viewController
+        }
+        
+            // Configurar la detección de códigos QR
+        let metadataOutput = AVCaptureMetadataOutput()
+        if captureSession.canAddOutput(metadataOutput) {
+            captureSession.addOutput(metadataOutput)
+            
+            metadataOutput.setMetadataObjectsDelegate(context.coordinator, queue: DispatchQueue.main)
+            metadataOutput.metadataObjectTypes = [.qr]
+        } else {
+            print("No se pudo agregar la salida de metadatos")
+            return viewController
+        }
+        
+            // Configurar la vista previa de la cámara
         let previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
-        previewLayer.frame = controller.view.layer.bounds
+        previewLayer.frame = viewController.view.layer.bounds
         previewLayer.videoGravity = .resizeAspectFill
-        controller.view.layer.addSublayer(previewLayer)
+        viewController.view.layer.addSublayer(previewLayer)
         
-            // Iniciar la sesión en un hilo en segundo plano
-        DispatchQueue.global(qos: .userInitiated).async {
-            if !captureSession.isRunning {
-                captureSession.startRunning()
-            }
-        }
+            // Iniciar la sesión de captura
+        captureSession.startRunning()
         
-        return controller
+        return viewController
     }
     
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-            // Actualizar el frame del preview layer si el tamaño cambia
-        if let layer = uiViewController.view.layer.sublayers?.first as? AVCaptureVideoPreviewLayer {
-            layer.frame = uiViewController.view.layer.bounds
-        }
-    }
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
     
-    static func dismantleUIViewController(_ uiViewController: UIViewController, coordinator: ()) {
-            // Detener la sesión cuando la vista se desmonta
-        if let layer = uiViewController.view.layer.sublayers?.first as? AVCaptureVideoPreviewLayer,
-           let session = layer.session {
-            DispatchQueue.global(qos: .userInitiated).async {
-                if session.isRunning {
-                    session.stopRunning()
+    class Coordinator: NSObject, AVCaptureMetadataOutputObjectsDelegate {
+        var parent: QRCodeScannerView
+        
+        init(_ parent: QRCodeScannerView) {
+            self.parent = parent
+        }
+        
+        func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject], from connection: AVCaptureConnection) {
+            if let metadataObject = metadataObjects.first as? AVMetadataMachineReadableCodeObject,
+               metadataObject.type == .qr,
+               let scannedValue = metadataObject.stringValue {
+                
+                DispatchQueue.main.async {
+                    self.parent.scannedCode = scannedValue
                 }
             }
         }

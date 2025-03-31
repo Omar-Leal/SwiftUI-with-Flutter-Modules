@@ -12,7 +12,7 @@ import SwiftUI
 struct ContentView: View {
     var body: some View {
         TabView {
-            QRCodeScannerView(viewModel: QRCodeScannerViewModel())
+            QRScannerScreen()
                 .tabItem {
                     Label("Escanear", systemImage: "qrcode.viewfinder")
                 }

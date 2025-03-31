@@ -7,11 +7,20 @@
 
 import SwiftUI
 
-
+@main
 struct QRScannerApp: App {
+    @StateObject var flutterManager = FlutterManager()
+    @State private var isAuthenticated = false
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            if isAuthenticated {
+                ContentView()
+                    .environmentObject(flutterManager)
+                    .preferredColorScheme(.light)
+            } else {
+                AuthenticationView(isAuthenticated: $isAuthenticated)
+                .preferredColorScheme(.light) //
+            }
         }
     }
 }
