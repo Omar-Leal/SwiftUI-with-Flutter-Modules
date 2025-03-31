@@ -10,6 +10,7 @@ import SwiftUI
 struct ScannedCodesListView: View {
     @State private var codes: [ScannedCode] = []
     
+    // mostrar historial de datos escaneados
     var body: some View {
         ZStack {
             LinearGradient(gradient: Gradient(colors: [Color.blue, Color.purple]),
